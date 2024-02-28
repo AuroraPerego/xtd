@@ -3,10 +3,10 @@ name: RunUnitTest
 on:
   push:
     branches:
-      - test
+      - exam
   pull_request:
     branches:
-      - test
+      - exam
 
 jobs:
   run-tests:

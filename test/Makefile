@@ -89,19 +89,19 @@ XTD_BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c
 LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)/include
 
-SUBDIRS := $(wildcard $(XTD_BASE)/*/)
+SUBDIRS := $(wildcard $(XTD_BASE)/Unit/*/)
 TARGETS_ALL := $(notdir $(patsubst %/,%,$(SUBDIRS)))
 
-define TEST_template
-$(1)/bin:
-	mkdir -p $(1)/bin
+define UNIT_TEST_template
+Unit/$(1)/bin:
+	mkdir -p Unit/$(1)/bin
 
-$(1)Test: $(1)/bin/$(1)_t_cc $(1)/bin/$(1)_t_cuda $(1)/bin/$(1)_t_hip $(1)/bin/$(1)_t_cpusycl $(1)/bin/$(1)_t_gpusycl
+$(1)UnitTest: Unit/$(1)/bin/$(1)_t_cc Unit/$(1)/bin/$(1)_t_cuda Unit/$(1)/bin/$(1)_t_hip Unit/$(1)/bin/$(1)_t_cpusycl Unit/$(1)/bin/$(1)_t_gpusycl
 
-$(1)/bin/$(1)_t_cc: $(1)/$(1)_t.cc | $(1)/bin
+Unit/$(1)/bin/$(1)_t_cc: Unit/$(1)/$(1)_t.cc | Unit/$(1)/bin
 	$(CXX) $(CXXFLAGS) $(LIB_INCLUDE) $$< -o $$@
 
-$(1)/bin/$(1)_t_cuda: $(1)/$(1)_t.cu | $(1)/bin
+Unit/$(1)/bin/$(1)_t_cuda: Unit/$(1)/$(1)_t.cu | Unit/$(1)/bin
 	@if [ -z "$(CUDA_BASE)" ]; then \
 		echo "Error: CUDA_BASE not set. Skipping $@"; \
 	else \
@@ -109,7 +109,7 @@ $(1)/bin/$(1)_t_cuda: $(1)/$(1)_t.cu | $(1)/bin
 		$(CUDA_NVCC) $(CUDA_CXXFLAGS) $(CUDA_LDFLAGS) $(CUDA_CUFLAGS) $(LIB_INCLUDE) $$< -o $$@; \
 	fi
 
-$(1)/bin/$(1)_t_hip: $(1)/$(1)_t.hip.cc | $(1)/bin
+Unit/$(1)/bin/$(1)_t_hip: Unit/$(1)/$(1)_t.hip.cc | Unit/$(1)/bin
 	@if [ -z "$(ROCM_BASE)" ]; then \
 		echo "Error: ROCM_BASE not set. Skipping $@"; \
 	else \
@@ -117,7 +117,7 @@ $(1)/bin/$(1)_t_hip: $(1)/$(1)_t.hip.cc | $(1)/bin
 		$(ROCM_HIPCC) $(HIPCC_CXXFLAGS) $(HIPCC_LDFLAGS) $(LIB_INCLUDE) $$< -o $$@; \
 	fi
 
-$(1)/bin/$(1)_t_cpusycl: $(1)/$(1)_t.sycl.cc | $(1)/bin
+Unit/$(1)/bin/$(1)_t_cpusycl: Unit/$(1)/$(1)_t.sycl.cc | Unit/$(1)/bin
 	@if [ -z "$(ONEAPI_BASE)" ]; then \
 		echo "Error: ONEAPI_BASE not set. Skipping $@"; \
 	else \
@@ -125,7 +125,7 @@ $(1)/bin/$(1)_t_cpusycl: $(1)/$(1)_t.sycl.cc | $(1)/bin
 		$(SYCL_CXX) $(SYCL_CXXFLAGS) $(SYCL_LDFLAGS) $(AOT_CPU_TARGETS) -DONEAPI_CPU $(LIB_INCLUDE) $$< -o $$@; \
 	fi
 
-$(1)/bin/$(1)_t_gpusycl: $(1)/$(1)_t.sycl.cc | $(1)/bin
+Unit/$(1)/bin/$(1)_t_gpusycl: Unit/$(1)/$(1)_t.sycl.cc | Unit/$(1)/bin
 	@if [ -z "$(ONEAPI_BASE)" ]; then \
 		echo "Error: ONEAPI_BASE not set. Skipping $@"; \
 	else \
@@ -138,31 +138,98 @@ $(1)/bin/$(1)_t_gpusycl: $(1)/$(1)_t.sycl.cc | $(1)/bin
 	fi
 
 # List of sin test executables
-$(1)_BIN := $(XTD_BASE)/$(1)/bin
+$(1)_UNIT_BIN := $(XTD_BASE)/Unit/$(1)/bin
 
 # Add targets
-TEST_EXECUTABLES := $(1)/bin/$(1)_t_cc
+TEST_EXECUTABLES := Unit/$(1)/bin/$(1)_t_cc
 ifdef $(CUDA_BASE)
-  TEST_EXECUTABLES += $(1)/bin/$(1)_t_cuda
+  TEST_EXECUTABLES += Unit/$(1)/bin/$(1)_t_cuda
 endif
 ifdef $(ROCM_BASE)
-  TEST_EXECUTABLES += $(1)/bin/$(1)_t_hip
+  TEST_EXECUTABLES += Unit/$(1)/bin/$(1)_t_hip
 endif
 ifdef $(ONEAPI_BASE)
-  TEST_EXECUTABLES += $(1)/bin/$(1)_t_cpusycl
+  TEST_EXECUTABLES += Unit/$(1)/bin/$(1)_t_cpusycl
   ifdef $(INTEL_GPU_EXISTS)
-    TEST_EXECUTABLES += $(1)/bin/$(1)_t_gpusycl
+    TEST_EXECUTABLES += Unit/$(1)/bin/$(1)_t_gpusycl
   endif
 endif
 
+run$(1)UnitTest: $(TEST_EXECUTABLES)
+	@find $$($(1)_UNIT_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
 
-#TEST_EXECUTABLES := $$(wildcard $$($(1)_BIN)/*)
-
-# TODO check if sinTest is run or not: is run, should be avoided
-run$(1)Test: $(TEST_EXECUTABLES)
-	@find $$($(1)_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
-
-clean_$(1):
-	rm -rf $(1)/bin
+clean_$(1)Unit:
+	rm -rf Unit/$(1)/bin
 endef
-$(foreach target,$(TARGETS_ALL),$(eval $(call TEST_template,$(target))))
+$(foreach target,$(TARGETS_ALL),$(eval $(call UNIT_TEST_template,$(target))))
+
+define REGR_TEST_template
+Regr/$(1)/bin:
+	mkdir -p Regr/$(1)/bin
+
+$(1)RegrTest: Regr/$(1)/bin/$(1)_t_cc Regr/$(1)/bin/$(1)_t_cuda Regr/$(1)/bin/$(1)_t_hip Regr/$(1)/bin/$(1)_t_cpusycl Regr/$(1)/bin/$(1)_t_gpusycl
+
+Regr/$(1)/bin/$(1)_t_cc: Regr/$(1)/$(1)_t.cc | Regr/$(1)/bin
+	$(CXX) $(CXXFLAGS) $(LIB_INCLUDE) $$< -o $$@
+
+Regr/$(1)/bin/$(1)_t_cuda: Regr/$(1)/$(1)_t.cu | Regr/$(1)/bin
+	@if [ -z "$(CUDA_BASE)" ]; then \
+		echo "Error: CUDA_BASE not set. Skipping $@"; \
+	else \
+		echo "$(CUDA_NVCC) $(CUDA_CXXFLAGS) $(CUDA_LDFLAGS) $(CUDA_CUFLAGS) $(LIB_INCLUDE) $$< -o $$@"; \
+		$(CUDA_NVCC) $(CUDA_CXXFLAGS) $(CUDA_LDFLAGS) $(CUDA_CUFLAGS) $(LIB_INCLUDE) $$< -o $$@; \
+	fi
+
+Regr/$(1)/bin/$(1)_t_hip: Regr/$(1)/$(1)_t.hip.cc | Regr/$(1)/bin
+	@if [ -z "$(ROCM_BASE)" ]; then \
+		echo "Error: ROCM_BASE not set. Skipping $@"; \
+	else \
+		echo "$(ROCM_HIPCC) $(HIPCC_CXXFLAGS) $(HIPCC_LDFLAGS) $(LIB_INCLUDE) $$< -o $$@"; \
+		$(ROCM_HIPCC) $(HIPCC_CXXFLAGS) $(HIPCC_LDFLAGS) $(LIB_INCLUDE) $$< -o $$@; \
+	fi
+
+Regr/$(1)/bin/$(1)_t_cpusycl: Regr/$(1)/$(1)_t.sycl.cc | Regr/$(1)/bin
+	@if [ -z "$(ONEAPI_BASE)" ]; then \
+		echo "Error: ONEAPI_BASE not set. Skipping $@"; \
+	else \
+		echo "$(SYCL_CXX) $(SYCL_CXXFLAGS) $(SYCL_LDFLAGS) $(AOT_CPU_TARGETS) -DONEAPI_CPU $(LIB_INCLUDE) $$< -o $$@"; \
+		$(SYCL_CXX) $(SYCL_CXXFLAGS) $(SYCL_LDFLAGS) $(AOT_CPU_TARGETS) -DONEAPI_CPU $(LIB_INCLUDE) $$< -o $$@; \
+	fi
+
+Regr/$(1)/bin/$(1)_t_gpusycl: Regr/$(1)/$(1)_t.sycl.cc | Regr/$(1)/bin
+	@if [ -z "$(ONEAPI_BASE)" ]; then \
+		echo "Error: ONEAPI_BASE not set. Skipping $@"; \
+	else \
+		if [ "$(INTEL_GPU_EXISTS)" -ne 0 ]; then \
+			echo "$(SYCL_CXX) $(SYCL_CXXFLAGS) $(SYCL_LDFLAGS) $(AOT_INTEL_TARGETS) $(LIB_INCLUDE) $$< -o $$@"; \
+			$(SYCL_CXX) $(SYCL_CXXFLAGS) $(SYCL_LDFLAGS) $(AOT_INTEL_TARGETS) $(LIB_INCLUDE) $$< -o $$@; \
+		else \
+    		echo "Error: Intel GPU not found. Skipping $@"; \
+    	fi \
+	fi
+
+# List of sin test executables
+$(1)_REGR_BIN := $(XTD_BASE)/Regr/$(1)/bin
+
+# Add targets
+TEST_EXECUTABLES := Regr/$(1)/bin/$(1)_t_cc
+ifdef $(CUDA_BASE)
+  TEST_EXECUTABLES += Regr/$(1)/bin/$(1)_t_cuda
+endif
+ifdef $(ROCM_BASE)
+  TEST_EXECUTABLES += Regr/$(1)/bin/$(1)_t_hip
+endif
+ifdef $(ONEAPI_BASE)
+  TEST_EXECUTABLES += Regr/$(1)/bin/$(1)_t_cpusycl
+  ifdef $(INTEL_GPU_EXISTS)
+    TEST_EXECUTABLES += Regr/$(1)/bin/$(1)_t_gpusycl
+  endif
+endif
+
+run$(1)RegrTest: $(TEST_EXECUTABLES)
+	@find $$($(1)_REGR_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
+
+clean_$(1)Regr:
+	rm -rf Regr/$(1)/bin
+endef
+$(foreach target,$(TARGETS_ALL),$(eval $(call REGR_TEST_template,$(target))))
