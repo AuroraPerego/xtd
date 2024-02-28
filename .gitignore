@@ -32,4 +32,5 @@
 *.app
 
 # Tests
-test/*/bin
+test/Unit/*/bin
+test/Regr/*/bin

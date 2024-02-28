@@ -23,5 +23,7 @@ jobs:
     - name: Build and Run Tests
       working-directory: test
       run: |
-        make sinTest
-        make runsinTest
+        make sinUnitTest
+        make runsinUnitTest
+        make sinRegrTest
+        make runsinRegrTest
