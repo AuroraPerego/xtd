@@ -86,8 +86,20 @@ else
 endif
 
 XTD_BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c
-LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)/include
+
+CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c/include
+ifeq ($(wildcard $(CATCH2_BASE)/catch.hpp),)
+CATCH2_BASE := $(XTD_BASE)
+endif
+
+CATCH2_INCLUDE := $(CATCH2_BASE)/catch.hpp
+
+external_catch2: $(CATCH2_INCLUDE)
+
+$(CATCH2_INCLUDE):
+	wget https://github.com/catchorg/Catch2/releases/download/v2.13.6/catch.hpp -O $(XTD_BASE)/catch.hpp
+
+LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)
 
 SUBDIRS := $(wildcard $(XTD_BASE)/*/)
 TARGETS_ALL := $(notdir $(patsubst %/,%,$(SUBDIRS)))
@@ -96,7 +108,7 @@ define TEST_template
 $(1)/bin:
 	mkdir -p $(1)/bin
 
-$(1)Test: $(1)/bin/$(1)_t_cc $(1)/bin/$(1)_t_cuda $(1)/bin/$(1)_t_hip $(1)/bin/$(1)_t_cpusycl $(1)/bin/$(1)_t_gpusycl
+$(1)Test: external_catch2 $(1)/bin/$(1)_t_cc $(1)/bin/$(1)_t_cuda $(1)/bin/$(1)_t_hip $(1)/bin/$(1)_t_cpusycl $(1)/bin/$(1)_t_gpusycl
 
 $(1)/bin/$(1)_t_cc: $(1)/$(1)_t.cc | $(1)/bin
 	$(CXX) $(CXXFLAGS) $(LIB_INCLUDE) $$< -o $$@
@@ -155,10 +167,6 @@ ifdef $(ONEAPI_BASE)
   endif
 endif
 
-
-#TEST_EXECUTABLES := $$(wildcard $$($(1)_BIN)/*)
-
-# TODO check if sinTest is run or not: is run, should be avoided
 run$(1)Test: $(TEST_EXECUTABLES)
 	@find $$($(1)_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
 
