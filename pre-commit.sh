@@ -2,12 +2,9 @@
 
 # Run your tests here
 cd test
-make sinUnitTest
-make sinRegrTest
-make runsinUnitTest
-make runsinRegrTest
-make clean_sinUnit
-make clean_sinRegr
+make clean
+make all -j
+make runAll
 
 # Capture the exit status of the tests
 status=$?

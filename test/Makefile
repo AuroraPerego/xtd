@@ -86,8 +86,20 @@ else
 endif
 
 XTD_BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c
-LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)/include
+
+CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c/include
+ifeq ($(wildcard $(CATCH2_BASE)/catch.hpp),)
+CATCH2_BASE := $(XTD_BASE)
+endif
+
+CATCH2_INCLUDE := $(CATCH2_BASE)/catch.hpp
+
+external_catch2: $(CATCH2_INCLUDE)
+
+$(CATCH2_INCLUDE):
+	wget https://github.com/catchorg/Catch2/releases/download/v2.13.6/catch.hpp -O $(XTD_BASE)/catch.hpp
+
+LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)
 
 SUBDIRS := $(wildcard $(XTD_BASE)/Unit/*/)
 TARGETS_ALL := $(notdir $(patsubst %/,%,$(SUBDIRS)))
@@ -96,7 +108,7 @@ define UNIT_TEST_template
 Unit/$(1)/bin:
 	mkdir -p Unit/$(1)/bin
 
-$(1)UnitTest: Unit/$(1)/bin/$(1)_t_cc Unit/$(1)/bin/$(1)_t_cuda Unit/$(1)/bin/$(1)_t_hip Unit/$(1)/bin/$(1)_t_cpusycl Unit/$(1)/bin/$(1)_t_gpusycl
+$(1)UnitTest: external_catch2 Unit/$(1)/bin/$(1)_t_cc Unit/$(1)/bin/$(1)_t_cuda Unit/$(1)/bin/$(1)_t_hip Unit/$(1)/bin/$(1)_t_cpusycl Unit/$(1)/bin/$(1)_t_gpusycl
 
 Unit/$(1)/bin/$(1)_t_cc: Unit/$(1)/$(1)_t.cc | Unit/$(1)/bin
 	$(CXX) $(CXXFLAGS) $(LIB_INCLUDE) $$< -o $$@
@@ -155,7 +167,7 @@ ifdef $(ONEAPI_BASE)
   endif
 endif
 
-run$(1)UnitTest: $(TEST_EXECUTABLES)
+run$(1)UnitTest: $(TEST_EXECUTABLES) $(1)UnitTest
 	@find $$($(1)_UNIT_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
 
 clean_$(1)Unit:
@@ -167,7 +179,7 @@ define REGR_TEST_template
 Regr/$(1)/bin:
 	mkdir -p Regr/$(1)/bin
 
-$(1)RegrTest: Regr/$(1)/bin/$(1)_t_cc Regr/$(1)/bin/$(1)_t_cuda Regr/$(1)/bin/$(1)_t_hip Regr/$(1)/bin/$(1)_t_cpusycl Regr/$(1)/bin/$(1)_t_gpusycl
+$(1)RegrTest: external_catch2 Regr/$(1)/bin/$(1)_t_cc Regr/$(1)/bin/$(1)_t_cuda Regr/$(1)/bin/$(1)_t_hip Regr/$(1)/bin/$(1)_t_cpusycl Regr/$(1)/bin/$(1)_t_gpusycl
 
 Regr/$(1)/bin/$(1)_t_cc: Regr/$(1)/$(1)_t.cc | Regr/$(1)/bin
 	$(CXX) $(CXXFLAGS) $(LIB_INCLUDE) $$< -o $$@
@@ -226,10 +238,21 @@ ifdef $(ONEAPI_BASE)
   endif
 endif
 
-run$(1)RegrTest: $(TEST_EXECUTABLES)
+run$(1)RegrTest: $(TEST_EXECUTABLES) $(1)RegrTest
 	@find $$($(1)_REGR_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
 
 clean_$(1)Regr:
 	rm -rf Regr/$(1)/bin
 endef
 $(foreach target,$(TARGETS_ALL),$(eval $(call REGR_TEST_template,$(target))))
+
+define BOTH_template
+$(1)Test: $(1)UnitTest $(1)RegrTest
+run$(1)Test: run$(1)UnitTest run$(1)RegrTest
+clean_$(1)Test: clean_$(1)Unit clean_$(1)Regr
+endef
+$(foreach target,$(TARGETS_ALL),$(eval $(call BOTH_template,$(target))))
+
+clean: $(foreach target,$(TARGETS_ALL), clean_$(target)Test)
+all: $(foreach target,$(TARGETS_ALL), $(target)Test)
+runAll: $(foreach target,$(TARGETS_ALL), run$(target)Test)
