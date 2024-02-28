@@ -38,7 +38,7 @@ CUDA_CUFLAGS := $(NVCC_COMMON)
 endif
 
 # ROCm
-ROCM_BASE := /opt/rocm-5.6.0
+ROCM_BASE := /opt/rocm
 ifeq ($(wildcard $(ROCM_BASE)),)
 # ROCm platform not found
 ROCM_BASE :=
@@ -48,7 +48,7 @@ ROCM_LIBDIR := $(ROCM_BASE)/lib
 ROCM_DEPS := $(ROCM_LIBDIR)/libamdhip64.so
 ROCM_ARCH := gfx900 gfx90a gfx1030
 ROCM_HIPCC := $(ROCM_BASE)/bin/hipcc
-HIPCC_CXXFLAGS := -fno-gpu-rdc $(foreach ARCH,$(ROCM_ARCH),--offload-arch=$(ARCH)) $(filter-out $(LLVM_UNSUPPORTED_CXXFLAGS),$(CXXFLAGS)) --target=$(GCC_TARGET) --gcc-toolchain=$(GCC_TOOLCHAIN)
+HIPCC_CXXFLAGS := -fno-gpu-rdc $(foreach ARCH,$(ROCM_ARCH),--offload-arch=$(ARCH)) $(filter-out $(LLVM_UNSUPPORTED_CXXFLAGS),$(CXXFLAGS)) --target=$(GCC_TARGET) --gcc-toolchain=$(GCC_TOOLCHAIN) -I$(ROCM_BASE)/include/hip -Wno-unused-result
 HIPCC_LDFLAGS := $(LDFLAGS) --target=$(GCC_TARGET) --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
 

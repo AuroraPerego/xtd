@@ -14,11 +14,11 @@ template <typename T> __global__ void sinfKernel(double *result, T input) {
   result[0] = static_cast<double>(xtd::sinf(input));
 }
 
-TEST_CASE("sinCuda", "[sin]") {
+TEST_CASE("sinHip", "[sin]") {
   int deviceCount;
   hipError_t hipStatus = hipGetDeviceCount(&deviceCount);
 
-  if (cudaStatus != hipSuccess || deviceCount == 0) {
+  if (hipStatus != hipSuccess || deviceCount == 0) {
     exit(EXIT_SUCCESS);
   }
 
