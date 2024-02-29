@@ -26,10 +26,9 @@ TEST_CASE("sinHip", "[sin]") {
   hipStream_t q;
   hipStreamCreate(&q);
 
-  // input
   std::vector<double> values{-1., 0., M_PI / 2, M_PI, 42.};
 
-  double* result;
+  double *result;
   int constexpr N = 6;
   hipMallocAsync(&result, N * sizeof(double), q);
 
@@ -45,16 +44,21 @@ TEST_CASE("sinHip", "[sin]") {
     sinfKernel<<<1, 1, 0, q>>>(&result[5], static_cast<double>(v));
 
     double resultHost[N];
-    hipMemcpyAsync(resultHost, result, N * sizeof(double), hipMemcpyDeviceToHost, q);
+    hipMemcpyAsync(resultHost, result, N * sizeof(double),
+                   hipMemcpyDeviceToHost, q);
 
     hipStreamSynchronize(q);
 
     auto const epsilon = std::numeric_limits<double>::epsilon();
     auto const epsilon_f = std::numeric_limits<float>::epsilon();
-    REQUIRE_THAT(resultHost[0], Catch::Matchers::WithinAbs(std::sin(static_cast<int>(v)), epsilon));
-    REQUIRE_THAT(resultHost[1], Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
-    REQUIRE_THAT(resultHost[2], Catch::Matchers::WithinAbs(std::sin(v), epsilon));
-    REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(sinf(static_cast<int>(v)), epsilon_f));
+    REQUIRE_THAT(resultHost[0], Catch::Matchers::WithinAbs(
+                                    std::sin(static_cast<int>(v)), epsilon));
+    REQUIRE_THAT(resultHost[1],
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
+    REQUIRE_THAT(resultHost[2],
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon));
+    REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(
+                                    sinf(static_cast<int>(v)), epsilon_f));
     REQUIRE_THAT(resultHost[4], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
     REQUIRE_THAT(resultHost[5], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
   }

@@ -1,8 +1,8 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
-#include <cmath>
 #include "math.h"
+#include <cmath>
 #include <limits>
 
 TEST_CASE("sinSerial", "[sin]") {
@@ -11,12 +11,20 @@ TEST_CASE("sinSerial", "[sin]") {
 
   std::vector<double> values{-1., 0., M_PI / 2, M_PI, 42.};
 
-  for (auto& v : values) {
-	REQUIRE_THAT(xtd::sin(static_cast<int>(v)), Catch::Matchers::WithinAbs(std::sin(static_cast<int>(v)), epsilon));
-	REQUIRE_THAT(xtd::sin(static_cast<float>(v)), Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
-	REQUIRE_THAT(xtd::sin(static_cast<double>(v)), Catch::Matchers::WithinAbs(std::sin(v), epsilon));
-	REQUIRE_THAT(xtd::sinf(static_cast<int>(v)), Catch::Matchers::WithinAbs(sinf(static_cast<int>(v)), epsilon_f));
-	REQUIRE_THAT(xtd::sinf(static_cast<float>(v)), Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
-	REQUIRE_THAT(xtd::sinf(static_cast<double>(v)), Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
+  for (auto &v : values) {
+    REQUIRE_THAT(
+        xtd::sin(static_cast<int>(v)),
+        Catch::Matchers::WithinAbs(std::sin(static_cast<int>(v)), epsilon));
+    REQUIRE_THAT(xtd::sin(static_cast<float>(v)),
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
+    REQUIRE_THAT(xtd::sin(static_cast<double>(v)),
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon));
+    REQUIRE_THAT(
+        xtd::sinf(static_cast<int>(v)),
+        Catch::Matchers::WithinAbs(sinf(static_cast<int>(v)), epsilon_f));
+    REQUIRE_THAT(xtd::sinf(static_cast<float>(v)),
+                 Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
+    REQUIRE_THAT(xtd::sinf(static_cast<double>(v)),
+                 Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
   }
 }

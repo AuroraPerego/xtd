@@ -1,10 +1,10 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
+#include "math.h"
 #include <cmath>
 #include <limits>
 #include <sycl/sycl.hpp>
-#include "math.h"
 
 TEST_CASE("sinSycl", "[sin]") {
   constexpr int N = 6;
@@ -37,10 +37,14 @@ TEST_CASE("sinSycl", "[sin]") {
 
     auto const epsilon = std::numeric_limits<double>::epsilon();
     auto const epsilon_f = std::numeric_limits<float>::epsilon();
-    REQUIRE_THAT(resultHost[0], Catch::Matchers::WithinAbs(std::sin(static_cast<int>(v)), epsilon));
-    REQUIRE_THAT(resultHost[1], Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
-    REQUIRE_THAT(resultHost[2], Catch::Matchers::WithinAbs(std::sin(v), epsilon));
-    REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(sinf(static_cast<int>(v)), epsilon_f));
+    REQUIRE_THAT(resultHost[0], Catch::Matchers::WithinAbs(
+                                    std::sin(static_cast<int>(v)), epsilon));
+    REQUIRE_THAT(resultHost[1],
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
+    REQUIRE_THAT(resultHost[2],
+                 Catch::Matchers::WithinAbs(std::sin(v), epsilon));
+    REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(
+                                    sinf(static_cast<int>(v)), epsilon_f));
     REQUIRE_THAT(resultHost[4], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
     REQUIRE_THAT(resultHost[5], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
   }

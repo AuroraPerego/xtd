@@ -29,3 +29,7 @@
 // standard C++ code
 #define XTD_TARGET_CPU
 #endif
+
+#if defined(__SYCL_DEVICE_ONLY__)
+#include <sycl/sycl.hpp>
+#endif
