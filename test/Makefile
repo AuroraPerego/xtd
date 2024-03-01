@@ -22,7 +22,7 @@ else
 # CUDA platform at $(CUDA_BASE)
 CUDA_LIBDIR := $(CUDA_BASE)/lib64
 CUDA_DEPS := $(CUDA_LIBDIR)/libcudart.so
-CUDA_ARCH := 60
+CUDA_ARCH := 60 70 80
 CUDA_CXXFLAGS := -I$(CUDA_BASE)/include
 CUDA_LDFLAGS := -L$(CUDA_LIBDIR) -lcudart -lcudadevrt
 CUDA_NVCC := $(CUDA_BASE)/bin/nvcc

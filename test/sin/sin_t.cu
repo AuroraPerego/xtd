@@ -1,17 +1,20 @@
-#define CATCH_CONFIG_MAIN
-#include <catch.hpp>
-
-#include "math.h"
-#include <cuda_runtime.h>
 #include <limits>
 #include <vector>
 
+#include <cuda_runtime.h>
+
+#define CATCH_CONFIG_MAIN
+#include <catch.hpp>
+
+#include "internal/cudaCheck.h"
+#include "math.h"
+
 template <typename T> __global__ void sinKernel(double *result, T input) {
-  result[0] = static_cast<double>(xtd::sin(input));
+  *result = static_cast<double>(xtd::sin(input));
 }
 
 template <typename T> __global__ void sinfKernel(double *result, T input) {
-  result[0] = static_cast<double>(xtd::sinf(input));
+  *result = static_cast<double>(xtd::sinf(input));
 }
 
 TEST_CASE("sinCuda", "[sin]") {
@@ -19,35 +22,40 @@ TEST_CASE("sinCuda", "[sin]") {
   cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
 
   if (cudaStatus != cudaSuccess || deviceCount == 0) {
+	std::cout << "No NVIDIA GPU found" << std::endl;
     exit(EXIT_SUCCESS);
   }
 
-  cudaSetDevice(0);
+  CUDA_CHECK(cudaSetDevice(0));
   cudaStream_t q;
-  cudaStreamCreate(&q);
+  CUDA_CHECK(cudaStreamCreate(&q));
 
   std::vector<double> values{-1., 0., M_PI / 2, M_PI, 42.};
 
   double *result;
   int constexpr N = 6;
-  cudaMallocAsync(&result, N * sizeof(double), q);
+  CUDA_CHECK(cudaMallocAsync(&result, N * sizeof(double), q));
 
   for (auto v : values) {
+    CUDA_CHECK(cudaMemsetAsync(result, 0x00, N * sizeof(double), q));
 
-    cudaMemsetAsync(&result, 0x00, N * sizeof(double), q);
-
-    sinKernel<<<1, 1, 0, q>>>(&result[0], static_cast<int>(v));
-    sinKernel<<<1, 1, 0, q>>>(&result[1], static_cast<float>(v));
-    sinKernel<<<1, 1, 0, q>>>(&result[2], static_cast<double>(v));
-    sinfKernel<<<1, 1, 0, q>>>(&result[3], static_cast<int>(v));
-    sinfKernel<<<1, 1, 0, q>>>(&result[4], static_cast<float>(v));
-    sinfKernel<<<1, 1, 0, q>>>(&result[5], static_cast<double>(v));
+    sinKernel<<<1, 1, 0, q>>>(result + 0, static_cast<int>(v));
+    CUDA_CHECK(cudaGetLastError());
+    sinKernel<<<1, 1, 0, q>>>(result + 1, static_cast<float>(v));
+    CUDA_CHECK(cudaGetLastError());
+    sinKernel<<<1, 1, 0, q>>>(result + 2, static_cast<double>(v));
+    CUDA_CHECK(cudaGetLastError());
+    sinfKernel<<<1, 1, 0, q>>>(result + 3, static_cast<int>(v));
+    CUDA_CHECK(cudaGetLastError());
+    sinfKernel<<<1, 1, 0, q>>>(result + 4, static_cast<float>(v));
+    CUDA_CHECK(cudaGetLastError());
+    sinfKernel<<<1, 1, 0, q>>>(result + 5, static_cast<double>(v));
+    CUDA_CHECK(cudaGetLastError());
 
     double resultHost[N];
-    cudaMemcpyAsync(resultHost, result, N * sizeof(double),
-                    cudaMemcpyDeviceToHost, q);
-
-    cudaStreamSynchronize(q);
+    CUDA_CHECK(cudaMemcpyAsync(resultHost, result, N * sizeof(double),
+                               cudaMemcpyDeviceToHost, q));
+    CUDA_CHECK(cudaStreamSynchronize(q));
 
     auto const epsilon = std::numeric_limits<double>::epsilon();
     auto const epsilon_f = std::numeric_limits<float>::epsilon();
@@ -63,5 +71,6 @@ TEST_CASE("sinCuda", "[sin]") {
     REQUIRE_THAT(resultHost[5], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
   }
 
-  cudaFreeAsync(result, q);
+  CUDA_CHECK(cudaFreeAsync(result, q));
+  CUDA_CHECK(cudaStreamDestroy(q));
 }
