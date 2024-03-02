@@ -1,24 +1,29 @@
+// C++ standard headers
+#include <cmath>
+#include <limits>
+#include <vector>
+
+// SYCL headers
+#include <sycl/sycl.hpp>
+
+// Catch2 headers
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
+// xtd headers
 #include "math.h"
-#include <cmath>
-#include <limits>
-#include <sycl/sycl.hpp>
 
-TEST_CASE("sinSycl", "[sin]") {
+TEST_CASE("sinSYCL", "[sin]") {
   try {
     constexpr int N = 6;
 #ifdef ONEAPI_CPU
-    auto queue =
-        sycl::queue{sycl::cpu_selector_v, sycl::property::queue::in_order()};
+    auto queue = sycl::queue{sycl::cpu_selector_v, sycl::property::queue::in_order()};
 #else
     if (sycl::device::get_devices(sycl::info::device_type::gpu).size() == 0) {
-      std::cout << "No GPUs found" << std::endl;
+      std::cout << "No SYCL GPUs found, the test will be skipped." << std::endl;
       exit(EXIT_SUCCESS);
-    };
-    auto queue =
-        sycl::queue{sycl::gpu_selector_v, sycl::property::queue::in_order()};
+    }
+    auto queue = sycl::queue{sycl::gpu_selector_v, sycl::property::queue::in_order()};
 #endif
     double *result = sycl::malloc_device<double>(N, queue);
 
@@ -42,23 +47,18 @@ TEST_CASE("sinSycl", "[sin]") {
 
       auto const epsilon = std::numeric_limits<double>::epsilon();
       auto const epsilon_f = std::numeric_limits<float>::epsilon();
-      REQUIRE_THAT(resultHost[0], Catch::Matchers::WithinAbs(
-                                      std::sin(static_cast<int>(v)), epsilon));
-      REQUIRE_THAT(resultHost[1],
-                   Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
-      REQUIRE_THAT(resultHost[2],
-                   Catch::Matchers::WithinAbs(std::sin(v), epsilon));
-      REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(
-                                      sinf(static_cast<int>(v)), epsilon_f));
-      REQUIRE_THAT(resultHost[4],
-                   Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
-      REQUIRE_THAT(resultHost[5],
-                   Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
+      REQUIRE_THAT(resultHost[0],
+                   Catch::Matchers::WithinAbs(std::sin(static_cast<int>(v)), epsilon));
+      REQUIRE_THAT(resultHost[1], Catch::Matchers::WithinAbs(std::sin(v), epsilon_f));
+      REQUIRE_THAT(resultHost[2], Catch::Matchers::WithinAbs(std::sin(v), epsilon));
+      REQUIRE_THAT(resultHost[3], Catch::Matchers::WithinAbs(sinf(static_cast<int>(v)), epsilon_f));
+      REQUIRE_THAT(resultHost[4], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
+      REQUIRE_THAT(resultHost[5], Catch::Matchers::WithinAbs(sinf(v), epsilon_f));
     }
     sycl::free(result, queue);
   } catch (sycl::exception const &exc) {
-    std::cerr << exc.what() << "Exception caught at file:" << __FILE__
-              << ", line:" << __LINE__ << std::endl;
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__
+              << std::endl;
     exit(EXIT_FAILURE);
   }
 }
