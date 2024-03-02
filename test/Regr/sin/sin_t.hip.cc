@@ -7,11 +7,11 @@
 #include <limits>
 
 template <typename T> __global__ void sinKernel(double *result, T input) {
-  result[0] = static_cast<double>(xtd::sin(input));
+  *result = static_cast<double>(xtd::sin(input));
 }
 
 template <typename T> __global__ void sinfKernel(double *result, T input) {
-  result[0] = static_cast<double>(xtd::sinf(input));
+  *result = static_cast<double>(xtd::sinf(input));
 }
 
 TEST_CASE("sinHip", "[sin]") {
@@ -34,12 +34,12 @@ TEST_CASE("sinHip", "[sin]") {
   double inp, sol;
   while (inputFile >> inp >> sol) {
 
-    hipMemsetAsync(&result, 0x00, N * sizeof(double), q);
+    hipMemsetAsync(result, 0x00, N * sizeof(double), q);
 
-    sinKernel<<<1, 1, 0, q>>>(&result[0], static_cast<float>(inp));
-    sinKernel<<<1, 1, 0, q>>>(&result[1], static_cast<double>(inp));
-    sinfKernel<<<1, 1, 0, q>>>(&result[2], static_cast<float>(inp));
-    sinfKernel<<<1, 1, 0, q>>>(&result[3], static_cast<double>(inp));
+    sinKernel<<<1, 1, 0, q>>>(result, static_cast<float>(inp));
+    sinKernel<<<1, 1, 0, q>>>(result+1, static_cast<double>(inp));
+    sinfKernel<<<1, 1, 0, q>>>(result+2, static_cast<float>(inp));
+    sinfKernel<<<1, 1, 0, q>>>(result+3, static_cast<double>(inp));
 
     double resultHost[N];
     hipMemcpyAsync(resultHost, result, N * sizeof(double), hipMemcpyDeviceToHost, q);
@@ -60,10 +60,10 @@ TEST_CASE("sinHip", "[sin]") {
   double inp, sol;
   while (inputFile >> inp >> sol) {
 
-    hipMemsetAsync(&result, 0x00, N * sizeof(double), q);
+    hipMemsetAsync(result, 0x00, N * sizeof(double), q);
 
-    sinKernel<<<1, 1, 0, q>>>(&result[0], static_cast<int>(inp));
-    sinfKernel<<<1, 1, 0, q>>>(&result[1], static_cast<int>(inp));
+    sinKernel<<<1, 1, 0, q>>>(result, static_cast<int>(inp));
+    sinfKernel<<<1, 1, 0, q>>>(result+1, static_cast<int>(inp));
 
     double resultHost[N];
     hipMemcpyAsync(resultHost, result, N * sizeof(double), hipMemcpyDeviceToHost, q);
