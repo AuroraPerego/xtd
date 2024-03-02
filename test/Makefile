@@ -1,3 +1,7 @@
+.PHONY: all build run clean
+
+all: build run
+
 # gcc
 CXX := g++
 GCC_TOOLCHAIN := $(abspath $(dir $(shell which $(CXX)))/..)
@@ -83,24 +87,23 @@ else
   endif
 endif
 
-XTD_BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+# xtd
+XTD_BASE := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST))))/..)
 
-CATCH2_BASE := /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/catch2/2.13.6-84f81620c3580a9689570b04155f541c/include
-ifeq ($(wildcard $(CATCH2_BASE)/catch.hpp),)
-CATCH2_BASE := $(XTD_BASE)
-endif
-
-CATCH2_INCLUDE := $(CATCH2_BASE)/catch.hpp
+# external Catch2 library
+CATCH2_INCLUDE := $(XTD_BASE)/test/external/catch2/include/catch.hpp
 
 external_catch2: $(CATCH2_INCLUDE)
 
 $(CATCH2_INCLUDE):
-	wget https://github.com/catchorg/Catch2/releases/download/v2.13.6/catch.hpp -O $(XTD_BASE)/catch.hpp
+	mkdir -p $(dir $@)
+	wget https://github.com/catchorg/Catch2/releases/download/v2.13.8/catch.hpp -O $@
 
-LIB_INCLUDE := -I$(XTD_BASE)/../include -I$(CATCH2_BASE)
+LIB_INCLUDE := -I$(XTD_BASE)/include -I$(XTD_BASE)/test -I$(dir $(CATCH2_INCLUDE))
 
-SUBDIRS := $(wildcard $(XTD_BASE)/*/)
-TARGETS_ALL := $(notdir $(patsubst %/,%,$(SUBDIRS)))
+# xtd tests
+SUBDIRS := $(wildcard $(XTD_BASE)/test/*/)
+TARGETS_ALL := $(filter-out common, $(filter-out external, $(notdir $(patsubst %/,%,$(SUBDIRS)))))
 
 define TEST_template
 $(1)/bin:
@@ -148,7 +151,7 @@ $(1)/bin/$(1)_t_gpusycl: $(1)/$(1)_t.sycl.cc | $(1)/bin
 	fi
 
 # List of test executables
-$(1)_BIN := $(XTD_BASE)/$(1)/bin
+$(1)_BIN := $(XTD_BASE)/test/$(1)/bin
 
 # Add targets
 TEST_EXECUTABLES := $(1)/bin/$(1)_t_cc
@@ -165,14 +168,17 @@ ifdef $(ONEAPI_BASE)
   endif
 endif
 
-run$(1)Test: $(TEST_EXECUTABLES)
+run_$(1)Test: $(TEST_EXECUTABLES)
 	@find $$($(1)_BIN) -maxdepth 1 -type f -exec echo "Running {}" \; -exec {} \; -exec echo \;
 
 clean_$(1)Test:
 	rm -rf $(1)/bin
 endef
+
 $(foreach target,$(TARGETS_ALL),$(eval $(call TEST_template,$(target))))
 
+build: $(foreach target,$(TARGETS_ALL), $(target)Test)
+
+run: $(foreach target,$(TARGETS_ALL), run_$(target)Test)
+
 clean: $(foreach target,$(TARGETS_ALL), clean_$(target)Test)
-all: $(foreach target,$(TARGETS_ALL), $(target)Test)
-runAll: $(foreach target,$(TARGETS_ALL), run$(target)Test)
