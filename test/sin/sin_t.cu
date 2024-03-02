@@ -6,8 +6,11 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
-#include "internal/cudaCheck.h"
+// xtd headers
 #include "math.h"
+
+// test headers
+#include "common/cuda_check.h"
 
 template <typename T> __global__ void sinKernel(double *result, T input) {
   *result = static_cast<double>(xtd::sin(input));

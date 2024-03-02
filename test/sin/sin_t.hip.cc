@@ -6,8 +6,11 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
-#include "internal/hipCheck.h"
+// xtd headers
 #include "math.h"
+
+// test headers
+#include "common/hip_check.h"
 
 template <typename T> __global__ void sinKernel(double *result, T input) {
   *result = static_cast<double>(xtd::sin(input));
