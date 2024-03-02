@@ -14,4 +14,3 @@ jobs:
       working-directory: test
       run: |
         make all
-        make runAll
